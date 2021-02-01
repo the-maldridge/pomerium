@@ -11,18 +11,13 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/open-policy-agent/opa/rego"
-	"google.golang.org/protobuf/reflect/protoregistry"
-	"google.golang.org/protobuf/types/known/anypb"
 	"gopkg.in/square/go-jose.v2"
 
 	"github.com/pomerium/pomerium/config"
 	"github.com/pomerium/pomerium/internal/directory"
 	"github.com/pomerium/pomerium/internal/log"
 	"github.com/pomerium/pomerium/pkg/cryptutil"
-	"github.com/pomerium/pomerium/pkg/grpc/databroker"
 )
 
 const (
@@ -361,55 +356,4 @@ func getDenyVar(vars rego.Vars) []Result {
 		})
 	}
 	return results
-}
-
-// DataBrokerData stores the data broker data by type => id => record
-type DataBrokerData map[string]map[string]interface{}
-
-// Clear removes all the data for the given type URL from the databroekr data.
-func (dbd DataBrokerData) Clear(typeURL string) {
-	delete(dbd, typeURL)
-}
-
-// Count returns the number of entries for the given type URL.
-func (dbd DataBrokerData) Count(typeURL string) int {
-	return len(dbd[typeURL])
-}
-
-// Get gets a record from the DataBrokerData.
-func (dbd DataBrokerData) Get(typeURL, id string) interface{} {
-	m, ok := dbd[typeURL]
-	if !ok {
-		return nil
-	}
-	return m[id]
-}
-
-// Update updates a record in the DataBrokerData.
-func (dbd DataBrokerData) Update(record *databroker.Record) {
-	db, ok := dbd[record.GetType()]
-	if !ok {
-		db = make(map[string]interface{})
-		dbd[record.GetType()] = db
-	}
-
-	if record.GetDeletedAt() != nil {
-		delete(db, record.GetId())
-	} else {
-		if obj, err := unmarshalAny(record.GetData()); err == nil {
-			db[record.GetId()] = obj
-		} else {
-			log.Warn().Err(err).Msg("failed to unmarshal unknown any type")
-			delete(db, record.GetId())
-		}
-	}
-}
-
-func unmarshalAny(any *anypb.Any) (proto.Message, error) {
-	messageType, err := protoregistry.GlobalTypes.FindMessageByURL(any.GetTypeUrl())
-	if err != nil {
-		return nil, err
-	}
-	msg := proto.MessageV1(messageType.New())
-	return msg, ptypes.UnmarshalAny(any, msg)
 }
