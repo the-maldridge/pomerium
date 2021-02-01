@@ -89,11 +89,6 @@ func (s *Store) GetRecordData(typeURL, id string) proto.Message {
 	return msg
 }
 
-// UpdateAdmins updates the admins in the store.
-func (s *Store) UpdateAdmins(admins []string) {
-	s.write("/admins", admins)
-}
-
 // UpdateRoutePolicies updates the route policies in the store.
 func (s *Store) UpdateRoutePolicies(routePolicies []config.Policy) {
 	s.write("/route_policies", routePolicies)
