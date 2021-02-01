@@ -234,7 +234,6 @@ func (a *Authorize) getEvaluatorRequestFromCheckRequest(
 ) (*evaluator.Request, error) {
 	requestURL := getCheckRequestURL(in)
 	req := &evaluator.Request{
-		DataBrokerData: a.dataBrokerData,
 		HTTP: evaluator.RequestHTTP{
 			Method:            in.GetAttributes().GetRequest().GetHttp().GetMethod(),
 			URL:               requestURL.String(),

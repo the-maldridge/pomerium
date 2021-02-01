@@ -39,6 +39,7 @@ type Evaluator struct {
 	rego     *rego.Rego
 	query    rego.PreparedEvalQuery
 	policies []config.Policy
+	store    *Store
 
 	authenticateHost string
 	jwk              *jose.JSONWebKey
@@ -51,6 +52,7 @@ func New(options *config.Options, store *Store) (*Evaluator, error) {
 		custom:           NewCustomEvaluator(store.opaStore),
 		authenticateHost: options.AuthenticateURL.Host,
 		policies:         options.GetAllPolicies(),
+		store:            store,
 	}
 	var err error
 	e.signer, e.jwk, err = newSigner(options)
@@ -166,7 +168,7 @@ func (e *Evaluator) JWTPayload(req *Request) map[string]interface{} {
 	payload := map[string]interface{}{
 		"iss": e.authenticateHost,
 	}
-	req.fillJWTPayload(payload)
+	req.fillJWTPayload(e.store, payload)
 	return payload
 }
 
@@ -248,9 +250,9 @@ type dataBrokerDataInput struct {
 
 func (e *Evaluator) newInput(req *Request, isValidClientCertificate bool) *input {
 	i := new(input)
-	i.DataBrokerData.Session = req.DataBrokerData.Get(sessionTypeURL, req.Session.ID)
+	i.DataBrokerData.Session = e.store.GetRecordData(sessionTypeURL, req.Session.ID)
 	if i.DataBrokerData.Session == nil {
-		i.DataBrokerData.Session = req.DataBrokerData.Get(serviceAccountTypeURL, req.Session.ID)
+		i.DataBrokerData.Session = e.store.GetRecordData(serviceAccountTypeURL, req.Session.ID)
 	}
 	var userIDs []string
 	if obj, ok := i.DataBrokerData.Session.(interface{ GetUserId() string }); ok && obj.GetUserId() != "" {
@@ -261,13 +263,13 @@ func (e *Evaluator) newInput(req *Request, isValidClientCertificate bool) *input
 	}
 
 	for _, userID := range userIDs {
-		i.DataBrokerData.User = req.DataBrokerData.Get(userTypeURL, userID)
+		i.DataBrokerData.User = e.store.GetRecordData(userTypeURL, userID)
 
-		user, ok := req.DataBrokerData.Get(directoryUserTypeURL, userID).(*directory.User)
+		user, ok := e.store.GetRecordData(directoryUserTypeURL, userID).(*directory.User)
 		if ok {
 			var groups []string
 			for _, groupID := range user.GetGroupIds() {
-				if dg, ok := req.DataBrokerData.Get(directoryGroupTypeURL, groupID).(*directory.Group); ok {
+				if dg, ok := e.store.GetRecordData(directoryGroupTypeURL, groupID).(*directory.Group); ok {
 					if dg.Name != "" {
 						groups = append(groups, dg.Name)
 					}
