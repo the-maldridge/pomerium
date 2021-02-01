@@ -6,17 +6,17 @@ route_policy_idx := first_allowed_route_policy_idx(input.http.url)
 
 route_policy := data.route_policies[route_policy_idx]
 
-session = data["type.googleapis.com/user.ServiceAccount"][input.session.id] {
-	data["type.googleapis.com/user.ServiceAccount"][input.session.id]
-} else = data["type.googleapis.com/session.Session"][input.session.id] {
-	data["type.googleapis.com/session.Session"][input.session.id]
+session = data.databroker_data["type.googleapis.com"]["user.ServiceAccount"][input.session.id] {
+	data.databroker_data["type.googleapis.com"]["user.ServiceAccount"][input.session.id]
+} else = data.databroker_data["type.googleapis.com"]["session.Session"][input.session.id] {
+	data.databroker_data["type.googleapis.com"]["session.Session"][input.session.id]
 } else = {} {
 	true
 }
 
-user = data["type.googleapis.com/user.User"][session.impersonate_user_id] {
+user = data.databroker_data["type.googleapis.com"]["user.User"][session.impersonate_user_id] {
 	session.impersonate_user_id
-} else = data["type.googleapis.com/user.User"][session.user_id] {
+} else = data.databroker_data["type.googleapis.com"]["user.User"][session.user_id] {
 	session.user_id
 } else = {} {
 	true
@@ -28,9 +28,9 @@ group_ids = user.group_ids {
 	true
 }
 
-group_names = [group.name | group_id := user.group_ids[_]; group := data["type.googleapis.com/directory.Group"][group_id]; name := group.name]
+group_names = [group.name | group_id := user.group_ids[_]; group := data.databroker_data["type.googleapis.com"]["directory.Group"][group_id]; name := group.name]
 
-group_emails = [group.email | group_id := user.group_ids[_]; group := data["type.googleapis.com/directory.Group"][group_id]; email := group.email]
+group_emails = [group.email | group_id := user.group_ids[_]; group := data.databroker_data["type.googleapis.com"]["directory.Group"][group_id]; email := group.email]
 
 groups = array.concat(array.concat(group_ids, group_names), group_emails)
 

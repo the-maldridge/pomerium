@@ -5,8 +5,10 @@ test_email_allowed {
 		"source": "example.com",
 		"allowed_users": ["x@example.com"],
 	}]
-		 with data["type.googleapis.com/session.Session"] as {"session1": {"user_id": "user1"}}
-		 with data["type.googleapis.com/user.User"] as {"user1": {"email": "x@example.com"}}
+		 with data.databroker_data as {"type.googleapis.com": {
+			"session.Session": {"session1": {"user_id": "user1"}},
+			"user.User": {"user1": {"email": "x@example.com"}},
+		}}
 		 with input.http as {"url": "http://example.com"}
 		 with input.session as {"id": "session1"}
 }
@@ -16,10 +18,10 @@ test_impersonate_email_not_allowed {
 		"source": "example.com",
 		"allowed_users": ["x@example.com"],
 	}]
-		 with input.databroker_data as {
-			"session": {"user_id": "user1", "impersonate_email": "y@example.com"},
-			"user": {"email": "x@example.com"},
-		}
+		 with data.databroker_data as {"type.googleapis.com": {
+			"session.Session": {"session1": {"user_id": "user1", "impersonate_email": "y@example.com"}},
+			"user.User": {"user1": {"email": "x@example.com"}},
+		}}
 		 with input.http as {"url": "http://example.com"}
 		 with input.session as {"id": "session1"}
 }
@@ -29,8 +31,10 @@ test_impersonate_email_allowed {
 		"source": "example.com",
 		"allowed_users": ["y@example.com"],
 	}]
-		 with data["type.googleapis.com/session.Session"] as {"session1": {"user_id": "user1", "impersonate_email": "y@example.com"}}
-		 with data["type.googleapis.com/user.User"] as {"user1": {"email": "x@example.com"}}
+		 with data.databroker_data as {"type.googleapis.com": {
+			"session.Session": {"session1": {"user_id": "user1", "impersonate_email": "y@example.com"}},
+			"user.User": {"user1": {"email": "x@example.com"}},
+		}}
 		 with input.http as {"url": "http://example.com"}
 		 with input.session as {"id": "session1"}
 }
@@ -40,9 +44,11 @@ test_group_allowed {
 		"source": "example.com",
 		"allowed_groups": ["group1"],
 	}]
-		 with data["type.googleapis.com/session.Session"] as {"session1": {"user_id": "user1"}}
-		 with data["type.googleapis.com/user.User"] as {"user1": {"email": "x@example.com", "group_ids": ["group1"]}}
-		 with data["type.googleapis.com/directory.Group"] as {"group1": {"id": "group1"}}
+		 with data.databroker_data as {"type.googleapis.com": {
+			"session.Session": {"session1": {"user_id": "user1"}},
+			"user.User": {"user1": {"email": "x@example.com", "group_ids": ["group1"]}},
+			"directory.Group": {"group1": {"id": "group1"}},
+		}}
 		 with input.http as {"url": "http://example.com"}
 		 with input.session as {"id": "session1"}
 }
@@ -52,20 +58,21 @@ test_impersonate_groups_not_allowed {
 		"source": "example.com",
 		"allowed_groups": ["group1"],
 	}]
-		 with data["type.googleapis.com/session.Session"] as {"session1": {"user_id": "user1", "impersonate_user_id": "user2"}}
-		 with data["type.googleapis.com/user.User"] as {"user1": {"email": "x@example.com", "group_ids": ["group1"]}, "user2": {"email": "y@example.com", "group_ids": ["group2"]}}
-		 with data["type.googleapis.com/directory.Group"] as {"group1": {"id": "group1"}, "group2": {"id": "group2"}}
+		 with data.databroker_data as {"type.googleapis.com": {
+			"session.Session": {"session1": {"user_id": "user1", "impersonate_user_id": "user2"}},
+			"user.User": {"user1": {"email": "x@example.com", "group_ids": ["group1"]}, "user2": {"email": "y@example.com", "group_ids": ["group2"]}},
+			"directory.Group": {"group1": {"id": "group1"}, "group2": {"id": "group2"}},
+		}}
 		 with input.http as {"url": "http://example.com"}
 		 with input.session as {"id": "session1"}
 }
 
 test_impersonate_groups_allowed {
-	not allow with data.route_policies as [{
+	allow with data.route_policies as [{
 		"source": "example.com",
 		"allowed_groups": ["group2"],
 	}]
-		 with data["type.googleapis.com/session.Session"] as {"session1": {"user_id": "user1", "impersonate_groups": ["group2"]}}
-		 with data["type.googleapis.com/directory.Group"] as {"group1": {"id": "group1"}, "group2": {"id": "group2"}}
+		 with data.databroker_data as {"type.googleapis.com": {"session.Session": {"session1": {"user_id": "user1", "impersonate_email": "test@example.com", "impersonate_groups": ["group2"]}}}}
 		 with input.http as {"url": "http://example.com"}
 		 with input.session as {"id": "session1"}
 }
@@ -75,8 +82,10 @@ test_domain_allowed {
 		"source": "example.com",
 		"allowed_domains": ["example.com"],
 	}]
-		 with data["type.googleapis.com/session.Session"] as {"session1": {"id": "session1", "user_id": "user1"}}
-		 with data["type.googleapis.com/user.User"] as {"user1": {"id": "user1", "email": "x@example.com"}}
+		 with data.databroker_data as {"type.googleapis.com": {
+			"session.Session": {"session1": {"user_id": "user1"}},
+			"user.User": {"user1": {"email": "x@example.com"}},
+		}}
 		 with input.http as {"url": "http://example.com"}
 		 with input.session as {"id": "session1"}
 }
@@ -86,8 +95,10 @@ test_impersonate_domain_not_allowed {
 		"source": "example.com",
 		"allowed_domains": ["example.com"],
 	}]
-		 with data["type.googleapis.com/session.Session"] as {"session1": {"id": "session1", "user_id": "user1", "impersonate_email": "y@example1.com"}}
-		 with data["type.googleapis.com/user.User"] as {"user1": {"id": "user1", "email": "x@example.com"}}
+		 with data.databroker_data as {"type.googleapis.com": {
+			"session.Session": {"session1": {"user_id": "user1", "impersonate_email": "y@example1.com"}},
+			"user.User": {"user1": {"email": "x@example.com"}},
+		}}
 		 with input.http as {"url": "http://example.com"}
 		 with input.session as {"id": "session1"}
 }
@@ -97,8 +108,10 @@ test_impersonate_domain_allowed {
 		"source": "example.com",
 		"allowed_domains": ["example1.com"],
 	}]
-		 with data["type.googleapis.com/session.Session"] as {"session1": {"id": "session1", "user_id": "user1", "impersonate_email": "y@example1.com"}}
-		 with data["type.googleapis.com/user.User"] as {"user1": {"id": "user1", "email": "x@example.com"}}
+		 with data.databroker_data as {"type.googleapis.com": {
+			"session.Session": {"session1": {"user_id": "user1", "impersonate_email": "y@example1.com"}},
+			"user.User": {"user1": {"email": "x@example.com"}},
+		}}
 		 with input.http as {"url": "http://example.com"}
 		 with input.session as {"id": "session1"}
 }
@@ -108,7 +121,7 @@ test_idp_claims_allowed {
 		"source": "example.com",
 		"allowed_idp_claims": {"some.claim": ["a", "b"]},
 	}]
-		 with data["type.googleapis.com/session.Session"] as {"session1": {"id": "session1", "user_id": "user1", "claims": {"some.claim": ["b"]}}}
+		 with data.databroker_data as {"type.googleapis.com": {"session.Session": {"session1": {"id": "session1", "user_id": "user1", "claims": {"some.claim": ["b"]}}}}}
 		 with input.http as {"url": "http://example.com"}
 		 with input.session as {"id": "session1"}
 }
@@ -295,8 +308,10 @@ test_any_authenticated_user_allowed {
 		"source": "example.com",
 		"AllowAnyAuthenticatedUser": true,
 	}]
-		 with data["type.googleapis.com/session.Session"] as {"session1": {"id": "session1", "user_id": "user1"}}
-		 with data["type.googleapis.com/user.User"] as {"user1": {"id": "user1", "email": "x@example.com"}}
+		 with data.databroker_data as {"type.googleapis.com": {
+			"session.Session": {"session1": {"id": "session1", "user_id": "user1"}},
+			"user.User": {"user1": {"id": "user1", "email": "x@example.com"}},
+		}}
 		 with input.http as {"url": "http://example.com"}
 		 with input.session as {"id": "session1"}
 }
