@@ -103,6 +103,12 @@ message Policy {
   repeated string rego = 6;
 }
 
+// A NACLBoxPublicKey is the public key used for NACL's Box Seal and Open functions.
+message NACLBoxPublicKey {
+  // should always be 32 bytes
+  bytes key = 1;
+}
+
 message Settings {
   message Certificate {
     string cert_file = 1;
@@ -178,4 +184,5 @@ message Settings {
   optional string autocert_dir = 59;
   optional bool skip_xff_append = 61;
   optional uint32 xff_num_trusted_hops = 69;
+  optional NACLBoxPublicKey audit_key = 71;
 }

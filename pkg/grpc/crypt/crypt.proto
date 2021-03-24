@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package pomerium.crypt;
+option go_package = "github.com/pomerium/pomerium/pkg/grpc/crypt";
+
+import "google/protobuf/any.proto";
+
+// A SealedMessage is an encrypted protobuf message.
+message SealedMessage {
+  // The Curve25519 public key used to encrypt the data encryption key.
+  string key_id = 1;
+  // The XChacha20poly1305 key used to encrypt the data,
+  // itself stored encrypted by the Curve25519 public key.
+  bytes data_encryption_key = 2;
+  // An arbitrary protobuf message with all string and byte values stored
+  // encrypted.
+  google.protobuf.Any data = 3;
+}
