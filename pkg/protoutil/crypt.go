@@ -90,12 +90,12 @@ func (enc *Encryptor) Encrypt(msg proto.Message) (*cryptpb.SealedMessage, error)
 	}
 
 	sealed, err := Transform(msg, func(fd protoreflect.FieldDescriptor, v protoreflect.Value) (protoreflect.Value, error) {
-		switch fd.Kind() {
-		case protoreflect.BytesKind:
-			bs := dek.Encrypt(v.Bytes())
+		switch vv := v.Interface().(type) {
+		case []byte:
+			bs := dek.Encrypt(vv)
 			return protoreflect.ValueOfBytes(bs), nil
-		case protoreflect.StringKind:
-			str := dek.EncryptString(v.String())
+		case string:
+			str := dek.EncryptString(vv)
 			return protoreflect.ValueOfString(str), nil
 		}
 		return v, nil

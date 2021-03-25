@@ -50,10 +50,11 @@ func (t transformer) transformAny(dst, src *anypb.Any) error {
 
 func (t transformer) transformList(fd protoreflect.FieldDescriptor, dst, src protoreflect.List) error {
 	for i, n := 0, src.Len(); i < n; i++ {
-		switch v := src.Get(i); {
-		case fd.Message() != nil:
+		v := src.Get(i)
+		switch vv := v.Interface().(type) {
+		case protoreflect.Message:
 			nv := dst.NewElement()
-			err := t.transformMessage(nv.Message(), v.Message())
+			err := t.transformMessage(nv.Message(), vv)
 			if err != nil {
 				return err
 			}
@@ -72,10 +73,10 @@ func (t transformer) transformList(fd protoreflect.FieldDescriptor, dst, src pro
 func (t transformer) transformMap(fd protoreflect.FieldDescriptor, dst, src protoreflect.Map) error {
 	var err error
 	src.Range(func(k protoreflect.MapKey, v protoreflect.Value) bool {
-		switch {
-		case fd.Message() != nil:
+		switch vv := v.Interface().(type) {
+		case protoreflect.Message:
 			nv := dst.NewValue()
-			err := t.transformMessage(nv.Message(), v.Message())
+			err := t.transformMessage(nv.Message(), vv)
 			if err != nil {
 				return false
 			}
