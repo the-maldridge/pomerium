@@ -1,17 +1,10 @@
 package protoutil
 
 import (
-	"crypto/cipher"
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
-	"golang.org/x/crypto/chacha20poly1305"
-	"golang.org/x/crypto/curve25519"
-	"golang.org/x/crypto/nacl/box"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -20,98 +13,90 @@ import (
 	cryptpb "github.com/pomerium/pomerium/pkg/grpc/crypt"
 )
 
-// Key is a Curve25519 private or public key.
-type Key struct {
-	ID   string
-	Data [32]byte
-}
-
-// public returns the private key's public key.
-func (key Key) public() Key {
-	var publicKey [32]byte
-	curve25519.ScalarBaseMult(&publicKey, &key.Data)
-	return Key{ID: key.ID, Data: publicKey}
-}
-
-type KeySource interface {
-	GetKey(id string) (Key, error)
-}
-
-type KeySourceFunc func(id string) (Key, error)
-
-func (src KeySourceFunc) GetKey(id string) (Key, error) {
-	return src(id)
-}
-
+// An Encryptor encrypts protobuf messages using a key encryption key and periodically rotated
+// generated data encryption keys.
 type Encryptor struct {
-	key         Key
+	kek         *cryptutil.PublicKeyEncryptionKey
 	rotateEvery time.Duration
 
 	sync.RWMutex
-	nextRotate time.Time
-	dekBytes   [chacha20poly1305.KeySize]byte
-	dek        cipher.AEAD
+	nextRotate   time.Time
+	dek          *cryptutil.DataEncryptionKey
+	encryptedDEK []byte
 }
 
 // NewEncryptor returns a new protobuf Encryptor.
-func NewEncryptor(key Key) *Encryptor {
+func NewEncryptor(kek *cryptutil.PublicKeyEncryptionKey) *Encryptor {
 	return &Encryptor{
-		key:         key,
+		kek:         kek,
 		rotateEvery: time.Hour,
 	}
 }
 
-func (enc *Encryptor) getDataEncryptionKey() ([chacha20poly1305.KeySize]byte, cipher.AEAD, error) {
+func (enc *Encryptor) getDataEncryptionKey() (*cryptutil.DataEncryptionKey, []byte, error) {
+	// double-checked locking
+	// first time we do a read only lookup
 	enc.RLock()
-	dekBytes, dek := enc.dekBytes, enc.dek
-	needsNewKey := enc.dek == nil || time.Now().Before(enc.nextRotate)
+	dek, encryptedDEK, err := enc.getDataEncryptionKeyLocked(true)
 	enc.RUnlock()
-
-	if !needsNewKey {
-		return dekBytes, dek, nil
+	if err != nil {
+		return nil, nil, err
+	} else if dek != nil {
+		return dek, encryptedDEK, nil
 	}
 
+	// second time we do a read/write lookup
 	enc.Lock()
-	defer enc.Unlock()
-
-	needsNewKey = enc.dek == nil || time.Now().Before(enc.nextRotate)
-	if needsNewKey {
-		_, err := io.ReadFull(rand.Reader, enc.dekBytes[:])
-		if err != nil {
-			return dekBytes, nil, err
-		}
-
-		enc.dek, err = chacha20poly1305.NewX(enc.dekBytes[:])
-		if err != nil {
-			return dekBytes, nil, err
-		}
-
-		enc.nextRotate = time.Now().Add(enc.rotateEvery)
-	}
-
-	return enc.dekBytes, enc.dek, nil
+	dek, encryptedDEK, err = enc.getDataEncryptionKeyLocked(false)
+	enc.Unlock()
+	return dek, encryptedDEK, err
 }
 
-// Seal encrypts a protobuf message.
-func (enc *Encryptor) Seal(msg proto.Message) (*cryptpb.SealedMessage, error) {
-	dekBytes, dek, err := enc.getDataEncryptionKey()
+func (enc *Encryptor) getDataEncryptionKeyLocked(readOnly bool) (*cryptutil.DataEncryptionKey, []byte, error) {
+	needsNewKey := enc.dek == nil || time.Now().Before(enc.nextRotate)
+	if !needsNewKey {
+		return enc.dek, enc.encryptedDEK, nil
+	}
+
+	if readOnly {
+		return nil, nil, nil
+	}
+
+	// generate a new data encryption key
+	dek, err := cryptutil.GenerateDataEncryptionKey()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// seal the data encryption key using the key encryption key
+	encryptedDEK, err := enc.kek.EncryptDataEncryptionKey(dek)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	enc.dek = dek
+	enc.encryptedDEK = encryptedDEK
+	enc.nextRotate = time.Now().Add(enc.rotateEvery)
+
+	return enc.dek, enc.encryptedDEK, nil
+}
+
+// Encrypt encrypts a protobuf message.
+func (enc *Encryptor) Encrypt(msg proto.Message) (*cryptpb.SealedMessage, error) {
+	// get the data encryption key
+	dek, encryptedDEK, err := enc.getDataEncryptionKey()
 	if err != nil {
 		return nil, err
-	}
-	dekSealedBytes, err := box.SealAnonymous(nil, dekBytes[:], &enc.key.Data, rand.Reader)
-	if err != nil {
-		return nil, fmt.Errorf("protoutil: error encrypting data-encryption-key: %w", err)
 	}
 
 	sealed, err := Transform(msg, func(fd protoreflect.FieldDescriptor, v protoreflect.Value) (protoreflect.Value, error) {
 		switch fd.Kind() {
 		case protoreflect.BytesKind:
-			bs := cryptutil.Encrypt(dek, v.Bytes(), nil)
+			bs := dek.Encrypt(v.Bytes())
 			return protoreflect.ValueOfBytes(bs), nil
 		case protoreflect.StringKind:
-			bs := cryptutil.Encrypt(dek, []byte(v.String()), nil)
-			raw := base64.StdEncoding.EncodeToString(bs)
-			return protoreflect.ValueOfString(raw), nil
+			str := dek.EncryptString(v.String())
+			return protoreflect.ValueOfString(str), nil
 		}
 		return v, nil
 	})
@@ -125,63 +110,78 @@ func (enc *Encryptor) Seal(msg proto.Message) (*cryptpb.SealedMessage, error) {
 	}
 
 	return &cryptpb.SealedMessage{
-		KeyId:             enc.key.ID,
-		DataEncryptionKey: dekSealedBytes,
+		KeyId:             enc.kek.ID(),
+		DataEncryptionKey: encryptedDEK,
 		Data:              sealedAny,
 	}, nil
 }
 
+// A Decryptor decrypts encrypted protobuf messages.
 type Decryptor struct {
-	keySource KeySource
+	keySource cryptutil.KeyEncryptionKeySource
+	dekCache  *cryptutil.DataEncryptionKeyCache
 }
 
-// NewDecryptor returns a new protobuf Decryptor.
-func NewDecryptor(keySource KeySource) *Decryptor {
+// NewDecryptor creates a new decryptor.
+func NewDecryptor(keySource cryptutil.KeyEncryptionKeySource) *Decryptor {
 	return &Decryptor{
 		keySource: keySource,
+		dekCache:  cryptutil.NewDataEncryptionKeyCache(),
 	}
+}
+
+func (dec *Decryptor) getDataEncryptionKey(keyEncryptionKeyID string, encryptedDEK []byte) (*cryptutil.DataEncryptionKey, error) {
+	// return a dek if its already cached
+	dek, ok := dec.dekCache.Get(encryptedDEK)
+	if ok {
+		return dek, nil
+	}
+
+	// look up the kek used for this dek
+	kek, err := dec.keySource.GetKeyEncryptionKey(keyEncryptionKeyID)
+	if err != nil {
+		return nil, fmt.Errorf("protoutil: error getting key-encryption-key (%s): %w",
+			keyEncryptionKeyID, err)
+	}
+
+	// decrypt the dek via the private kek
+	dek, err = kek.DecryptDataEncryptionKey(encryptedDEK)
+	if err != nil {
+		return nil, fmt.Errorf("protoutil: error decrypting data-encryption-key: %w", err)
+	}
+
+	// cache it for next time
+	dec.dekCache.Put(encryptedDEK, dek)
+
+	return dek, nil
 }
 
 // Open decrypts an encrypted protobuf message.
 func (dec *Decryptor) Open(src *cryptpb.SealedMessage) (proto.Message, error) {
-	kekPrivate, err := dec.keySource.GetKey(src.GetKeyId())
+	dek, err := dec.getDataEncryptionKey(src.GetKeyId(), src.GetDataEncryptionKey())
 	if err != nil {
-		return nil, fmt.Errorf("protoutil: error getting key-encryption-key (%s): %w", src.GetKeyId(), err)
-	}
-	kekPublic := kekPrivate.public()
-
-	dekRaw, ok := box.OpenAnonymous(nil, src.DataEncryptionKey, &kekPublic.Data, &kekPrivate.Data)
-	if !ok {
-		return nil, fmt.Errorf("protoutil: error decrypting data-encryption-key")
-	}
-	dek, err := chacha20poly1305.NewX(dekRaw)
-	if err != nil {
-		return nil, fmt.Errorf("protoutil: invalid data-encryption-key: %w", err)
+		return nil, err
 	}
 
+	// decrypt the protobuf message using the data encryption key
 	sealed, err := src.Data.UnmarshalNew()
 	if err != nil {
 		return nil, fmt.Errorf("protoutil: error unmarshaling encrypted data: %w", err)
 	}
-
 	opened, err := Transform(sealed, func(fd protoreflect.FieldDescriptor, v protoreflect.Value) (protoreflect.Value, error) {
 		switch fd.Kind() {
 		case protoreflect.BytesKind:
-			bs, err := cryptutil.Decrypt(dek, v.Bytes(), nil)
+			bs, err := dek.Decrypt(v.Bytes())
 			if err != nil {
 				return v, err
 			}
 			return protoreflect.ValueOfBytes(bs), nil
 		case protoreflect.StringKind:
-			raw, err := base64.StdEncoding.DecodeString(v.String())
+			str, err := dek.DecryptString(v.String())
 			if err != nil {
 				return v, err
 			}
-			bs, err := cryptutil.Decrypt(dek, raw, nil)
-			if err != nil {
-				return v, err
-			}
-			return protoreflect.ValueOfString(string(bs)), nil
+			return protoreflect.ValueOfString(str), nil
 		}
 		return v, nil
 	})
