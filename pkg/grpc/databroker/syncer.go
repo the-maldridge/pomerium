@@ -14,7 +14,9 @@ import (
 )
 
 type syncerConfig struct {
-	typeURL string
+	serverVersion uint64
+	recordVersion uint64
+	typeURL       string
 }
 
 // A SyncerOption customizes the syncer configuration.
@@ -26,6 +28,20 @@ func getSyncerConfig(options ...SyncerOption) *syncerConfig {
 		option(cfg)
 	}
 	return cfg
+}
+
+// WithRecordVersion sets the initial record version in the syncer config.
+func WithRecordVersion(recordVersion uint64) SyncerOption {
+	return func(cfg *syncerConfig) {
+		cfg.recordVersion = recordVersion
+	}
+}
+
+// WithServerVersion sets the initial server version in the syncer config.
+func WithServerVersion(serverVersion uint64) SyncerOption {
+	return func(cfg *syncerConfig) {
+		cfg.serverVersion = serverVersion
+	}
 }
 
 // WithTypeURL restricts the sync'd results to the given type.
@@ -64,12 +80,17 @@ type Syncer struct {
 func NewSyncer(id string, handler SyncerHandler, options ...SyncerOption) *Syncer {
 	closeCtx, closeCtxCancel := context.WithCancel(context.Background())
 
+	cfg := getSyncerConfig(options...)
+
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = 0
 	return &Syncer{
-		cfg:     getSyncerConfig(options...),
+		cfg:     cfg,
 		handler: handler,
 		backoff: bo,
+
+		recordVersion: cfg.recordVersion,
+		serverVersion: cfg.serverVersion,
 
 		closeCtx:       closeCtx,
 		closeCtxCancel: closeCtxCancel,
