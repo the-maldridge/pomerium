@@ -3,6 +3,7 @@ package generator
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/open-policy-agent/opa/ast"
 
@@ -80,7 +81,7 @@ func (g *Generator) Generate(policy *parser.Policy) (*ast.Module, error) {
 		rules.Add(rule)
 	}
 
-	return &ast.Module{
+	mod := &ast.Module{
 		Package: &ast.Package{
 			Path: ast.Ref{
 				ast.StringTerm("policy.rego"),
@@ -89,7 +90,21 @@ func (g *Generator) Generate(policy *parser.Policy) (*ast.Module, error) {
 			},
 		},
 		Rules: rules,
-	}, nil
+	}
+
+	// move functions to the end
+	sort.SliceStable(mod.Rules, func(i, j int) bool {
+		return len(mod.Rules[i].Head.Args) < len(mod.Rules[j].Head.Args)
+	})
+
+	i := 1
+	ast.WalkRules(mod, func(r *ast.Rule) bool {
+		r.SetLoc(ast.NewLocation([]byte(r.String()), "", i, 1))
+		i++
+		return false
+	})
+
+	return mod, nil
 }
 
 // NewRule creates a new rule with a dynamically generated name.
