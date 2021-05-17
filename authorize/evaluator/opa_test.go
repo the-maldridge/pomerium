@@ -55,7 +55,7 @@ func TestOPA(t *testing.T) {
 		q, err := r.PrepareForEval(context.Background())
 		require.NoError(t, err)
 		rs, err := q.Eval(context.Background(),
-			rego.EvalInput((&Evaluator{store: store}).newInput(req, isValidClientCertificate)),
+			rego.EvalInput((&OriginalEvaluator{store: store}).newInput(req, isValidClientCertificate)),
 		)
 		require.NoError(t, err)
 		require.Len(t, rs, 1)
@@ -744,4 +744,7 @@ func TestOPA(t *testing.T) {
 		assert.Equal(t, uint64(math.MaxUint64), serverVersion)
 		assert.NotEqual(t, uint64(0), recordVersion) // random
 	})
+}
+
+func TestHeadersOPA(t *testing.T) {
 }

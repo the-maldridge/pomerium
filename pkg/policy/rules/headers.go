@@ -10,16 +10,19 @@ import "github.com/open-policy-agent/opa/ast"
 func IdentityHeaders() *ast.Rule {
 	return ast.MustParseRule(`
 identity_headers = hs {
+	# 5 minutes from now in seconds
+	five_minutes := (time.now_ns() / 1e9) + (60 * 5)
+
 	base_jwt_claims := [
-		["iss", jwt_payload_iss],
-		["aud", jwt_payload_aud],
-		["jti", jwt_payload_jti],
-		["exp", jwt_payload_exp],
-		["iat", jwt_payload_iat],
-		["sub", jwt_payload_sub],
-		["user", jwt_payload_user],
-		["email", jwt_payload_email],
-		["groups", jwt_payload_groups],
+		["iss", ` + or(`data.issuer`, `""`) + `],
+		["aud", ` + or(`parse_url(input.http.url).hostname`, `""`) + `],
+		["jti", ` + or(`session.id`, `""`) + `],
+		["exp", ` + or(`min([five_minutes, session.expires_at.seconds])`, or(`five_minutes`, `null`)) + `],
+		["iat", ` + or(`session.id_token.issued_at.seconds`, or(`session.issued_at.seconds`, `null`)) + `],
+		["sub", ` + or(`user.id`, `""`) + `],
+		["user", ` + or(`user.id`, `""`) + `],
+		["email", ` + or(`session.impersonate_email`, or(`directory_user.email`, or(`user.email`, `""`))) + `],
+		["groups", ` + or(`""`, `""`) + `],
 	]
 
 	jwt_headers := {
@@ -76,4 +79,8 @@ func headerValue(variableName string) string {
 	c1 := `[x| is_array(` + variableName + `); x := concat(",", ` + variableName + `)]`
 	c2 := `[` + variableName + `]`
 	return `array.concat(` + c1 + `, ` + c2 + `)[0]`
+}
+
+func or(v1, v2 string) string {
+	return `array.concat([x|x:=` + v1 + `],[x|x:=` + v2 + `])[0]`
 }

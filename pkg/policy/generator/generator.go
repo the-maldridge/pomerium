@@ -55,7 +55,10 @@ func (g *Generator) Generate(policy *parser.Policy) (*ast.Module, error) {
 
 	for _, policyRule := range policy.Rules {
 		rule := &ast.Rule{
-			Head: &ast.Head{Name: ast.Var(policyRule.Action)},
+			Head: &ast.Head{
+				Name:  ast.Var(policyRule.Action),
+				Value: ast.VarTerm("v"),
+			},
 		}
 
 		fields := []struct {
@@ -74,6 +77,9 @@ func (g *Generator) Generate(policy *parser.Policy) (*ast.Module, error) {
 			subRule, err := field.generator(&rules, field.criteria)
 			if err != nil {
 				return nil, err
+			}
+			if len(rule.Body) == 0 {
+				rule.Body = append(rule.Body, ast.Assign.Expr(ast.VarTerm("v"), ast.VarTerm(string(subRule.Head.Name))))
 			}
 			rule.Body = append(rule.Body, ast.NewExpr(ast.VarTerm(string(subRule.Head.Name))))
 		}

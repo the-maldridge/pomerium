@@ -25,7 +25,7 @@ import (
 func TestJSONMarshal(t *testing.T) {
 	opt := config.NewDefaultOptions()
 	opt.AuthenticateURLString = "https://authenticate.example.com"
-	e, err := New(opt, NewStoreFromProtos(0,
+	e, err := NewOriginalEvaluator(opt, NewStoreFromProtos(0,
 		&session.Session{
 			UserId: "user1",
 		},
@@ -134,7 +134,7 @@ func TestEvaluator_Evaluate(t *testing.T) {
 				Data:    data,
 			})
 
-			e, err := New(&config.Options{
+			e, err := NewOriginalEvaluator(&config.Options{
 				AuthenticateURLString: "https://authn.example.com",
 				Policies:              tc.policies,
 			}, store)
@@ -161,7 +161,7 @@ func mustParseURL(str string) *url.URL {
 
 func BenchmarkEvaluator_Evaluate(b *testing.B) {
 	store := NewStore()
-	e, err := New(&config.Options{
+	e, err := NewOriginalEvaluator(&config.Options{
 		AuthenticateURLString: "https://authn.example.com",
 	}, store)
 	if !assert.NoError(b, err) {

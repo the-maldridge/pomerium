@@ -22,7 +22,7 @@ func (g *Generator) generateAndRule(dst *ast.RuleSet, policyCriteria []parser.Cr
 		return nil, err
 	}
 
-	g.fillViaAnd(rule, expressions)
+	g.fillViaAnd(rule, false, expressions)
 	dst.Add(rule)
 
 	return rule, nil
@@ -37,15 +37,12 @@ func (g *Generator) generateNotRule(dst *ast.RuleSet, policyCriteria []parser.Cr
 
 	// NOT => (NOT A) AND (NOT B)
 
-	expressions, err := g.generateCriterionRules(dst, policyCriteria)
+	terms, err := g.generateCriterionRules(dst, policyCriteria)
 	if err != nil {
 		return nil, err
 	}
-	for _, expr := range expressions {
-		expr.Negated = true
-	}
 
-	g.fillViaAnd(rule, expressions)
+	g.fillViaAnd(rule, true, terms)
 	dst.Add(rule)
 
 	return rule, nil
@@ -58,12 +55,12 @@ func (g *Generator) generateOrRule(dst *ast.RuleSet, policyCriteria []parser.Cri
 		return rule, nil
 	}
 
-	expressions, err := g.generateCriterionRules(dst, policyCriteria)
+	terms, err := g.generateCriterionRules(dst, policyCriteria)
 	if err != nil {
 		return nil, err
 	}
 
-	g.fillViaOr(rule, expressions)
+	g.fillViaOr(rule, false, terms)
 	dst.Add(rule)
 
 	return rule, nil
@@ -78,22 +75,19 @@ func (g *Generator) generateNorRule(dst *ast.RuleSet, policyCriteria []parser.Cr
 
 	// NOR => (NOT A) OR (NOT B)
 
-	expressions, err := g.generateCriterionRules(dst, policyCriteria)
+	terms, err := g.generateCriterionRules(dst, policyCriteria)
 	if err != nil {
 		return nil, err
 	}
-	for _, expr := range expressions {
-		expr.Negated = true
-	}
 
-	g.fillViaOr(rule, expressions)
+	g.fillViaOr(rule, true, terms)
 	dst.Add(rule)
 
 	return rule, nil
 }
 
-func (g *Generator) generateCriterionRules(dst *ast.RuleSet, policyCriteria []parser.Criterion) ([]*ast.Expr, error) {
-	var expressions []*ast.Expr
+func (g *Generator) generateCriterionRules(dst *ast.RuleSet, policyCriteria []parser.Criterion) ([]*ast.Term, error) {
+	var terms []*ast.Term
 	for _, policyCriterion := range policyCriteria {
 		criterion, ok := g.criteria[policyCriterion.Name]
 		if !ok {
@@ -106,27 +100,42 @@ func (g *Generator) generateCriterionRules(dst *ast.RuleSet, policyCriteria []pa
 		*dst = dst.Merge(additionalRules)
 		dst.Add(mainRule)
 
-		expr := ast.NewExpr(ast.VarTerm(string(mainRule.Head.Name)))
-		expressions = append(expressions, expr)
+		terms = append(terms, ast.VarTerm(string(mainRule.Head.Name)))
 	}
-	return expressions, nil
+	return terms, nil
 }
 
-func (g *Generator) fillViaAnd(rule *ast.Rule, expressions []*ast.Expr) {
-	for _, expr := range expressions {
+func (g *Generator) fillViaAnd(rule *ast.Rule, negated bool, terms []*ast.Term) {
+	for i, term := range terms {
+		if i == 0 {
+			rule.Body = append(rule.Body, ast.Assign.Expr(ast.VarTerm("v"), term))
+		}
+		expr := ast.NewExpr(term)
+		if negated {
+			expr.Negated = true
+		}
 		rule.Body = append(rule.Body, expr)
 	}
 }
 
-func (g *Generator) fillViaOr(rule *ast.Rule, expressions []*ast.Expr) {
+func (g *Generator) fillViaOr(rule *ast.Rule, negated bool, terms []*ast.Term) {
 	currentRule := rule
-	for i, expr := range expressions {
+	currentRule.Head.Value = ast.VarTerm("v")
+	for i, term := range terms {
 		if i > 0 {
 			currentRule.Else = &ast.Rule{
-				Head: &ast.Head{},
+				Head: &ast.Head{
+					Value: ast.VarTerm("v"),
+				},
 			}
 			currentRule = currentRule.Else
 		}
-		currentRule.Body = ast.Body{expr}
+
+		currentRule.Body = append(currentRule.Body, ast.Assign.Expr(ast.VarTerm("v"), term))
+		expr := ast.NewExpr(ast.VarTerm("v"))
+		if negated {
+			expr.Negated = true
+		}
+		currentRule.Body = append(currentRule.Body, expr)
 	}
 }
