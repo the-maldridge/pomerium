@@ -81,14 +81,14 @@ func validateOptions(o *config.Options) error {
 }
 
 // newPolicyEvaluator returns an policy evaluator.
-func newPolicyEvaluator(opts *config.Options, store *evaluator.Store) (*evaluator.OriginalEvaluator, error) {
+func newPolicyEvaluator(opts *config.Options, store *evaluator.Store) (*evaluator.Evaluator, error) {
 	metrics.AddPolicyCountCallback("pomerium-authorize", func() int64 {
 		return int64(len(opts.GetAllPolicies()))
 	})
 	ctx := context.Background()
 	_, span := trace.StartSpan(ctx, "authorize.newPolicyEvaluator")
 	defer span.End()
-	return evaluator.NewOriginalEvaluator(opts, store)
+	return evaluator.New(ctx, store, opts)
 }
 
 // OnConfigChange updates internal structures based on config.Options

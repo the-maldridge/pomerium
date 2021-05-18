@@ -16,7 +16,7 @@ import (
 
 type authorizeState struct {
 	sharedKey        []byte
-	evaluator        *evaluator.OriginalEvaluator
+	evaluator        *evaluator.Evaluator
 	encoder          encoding.MarshalUnmarshaler
 	dataBrokerClient databroker.DataBrokerServiceClient
 	auditEncryptor   *protoutil.Encryptor

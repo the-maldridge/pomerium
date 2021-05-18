@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/open-policy-agent/opa/rego"
 
@@ -65,9 +66,11 @@ func NewPolicyEvaluator(ctx context.Context, store *Store, configPolicy *config.
 	// add any custom rego
 	for _, sp := range configPolicy.SubPolicies {
 		for _, src := range sp.Rego {
-			if src != "" {
-				scripts = append(scripts, src)
+			if src == "" {
+				continue
 			}
+
+			scripts = append(scripts, src)
 		}
 	}
 
@@ -82,6 +85,17 @@ func NewPolicyEvaluator(ctx context.Context, store *Store, configPolicy *config.
 		)
 
 		q, err := r.PrepareForEval(ctx)
+		// if no package is in the src, add it
+		if err != nil && strings.Contains(err.Error(), "package expected") {
+			r := rego.New(
+				rego.Store(store),
+				rego.Module("pomerium.policy", "package pomerium.policy\n\n"+script),
+				rego.Query("result = data.pomerium.policy"),
+				getGoogleCloudServerlessHeadersRegoOption,
+				store.GetDataBrokerRecordOption(),
+			)
+			q, err = r.PrepareForEval(ctx)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -115,10 +129,11 @@ func (e *PolicyEvaluator) evaluateQuery(ctx context.Context, req *PolicyRequest,
 		return nil, fmt.Errorf("authorize: unexpected empty result from evaluating policy.rego")
 	}
 
-	return &PolicyResponse{
+	res := &PolicyResponse{
 		Allow: e.getAllow(rs[0].Bindings),
 		Deny:  e.getDeny(ctx, rs[0].Bindings),
-	}, nil
+	}
+	return res, nil
 }
 
 // getAllow gets the allow var. It expects a boolean.

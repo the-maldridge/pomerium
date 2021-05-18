@@ -71,7 +71,7 @@ domains_0 {
 	session := get_session(input.session.id)
 	user := get_user(session)
 	domain := split(get_user_email(session, user), "@")[1]
-	domain = rule_data
+	domain == rule_data
 }
 
 domains_1 {
@@ -79,7 +79,7 @@ domains_1 {
 	session := get_session(input.session.id)
 	user := get_user(session)
 	domain := split(get_user_email(session, user), "@")[1]
-	domain = rule_data
+	domain == rule_data
 }
 
 domains_2 {
@@ -87,7 +87,7 @@ domains_2 {
 	session := get_session(input.session.id)
 	user := get_user(session)
 	domain := split(get_user_email(session, user), "@")[1]
-	domain = rule_data
+	domain == rule_data
 }
 
 domains_3 {
@@ -95,7 +95,7 @@ domains_3 {
 	session := get_session(input.session.id)
 	user := get_user(session)
 	domain := split(get_user_email(session, user), "@")[1]
-	domain = rule_data
+	domain == rule_data
 }
 
 domains_4 {
@@ -103,7 +103,7 @@ domains_4 {
 	session := get_session(input.session.id)
 	user := get_user(session)
 	domain := split(get_user_email(session, user), "@")[1]
-	domain = rule_data
+	domain == rule_data
 }
 
 groups_0 {
@@ -128,7 +128,7 @@ groups_0 {
 	groups = array.concat(group_ids, array.concat(group_names, group_emails))
 	some group
 	group = groups[_0]
-	group = rule_data
+	group == rule_data
 }
 
 groups_1 {
@@ -153,7 +153,7 @@ groups_1 {
 	groups = array.concat(group_ids, array.concat(group_names, group_emails))
 	some group
 	group = groups[_0]
-	group = rule_data
+	group == rule_data
 }
 
 groups_2 {
@@ -178,7 +178,7 @@ groups_2 {
 	groups = array.concat(group_ids, array.concat(group_names, group_emails))
 	some group
 	group = groups[_0]
-	group = rule_data
+	group == rule_data
 }
 
 groups_3 {
@@ -203,7 +203,7 @@ groups_3 {
 	groups = array.concat(group_ids, array.concat(group_names, group_emails))
 	some group
 	group = groups[_0]
-	group = rule_data
+	group == rule_data
 }
 
 groups_4 {
@@ -228,7 +228,7 @@ groups_4 {
 	groups = array.concat(group_ids, array.concat(group_names, group_emails))
 	some group
 	group = groups[_0]
-	group = rule_data
+	group == rule_data
 }
 
 claims_0 {
@@ -271,7 +271,7 @@ users_0 {
 	rule_data := "user1"
 	session := get_session(input.session.id)
 	user := get_user(session)
-	user_id = rule_data
+	user.id == rule_data
 }
 
 emails_0 {
@@ -279,14 +279,14 @@ emails_0 {
 	session := get_session(input.session.id)
 	user := get_user(session)
 	email := get_user_email(session, user)
-	email = rule_data
+	email == rule_data
 }
 
 users_1 {
 	rule_data := "user2"
 	session := get_session(input.session.id)
 	user := get_user(session)
-	user_id = rule_data
+	user.id == rule_data
 }
 
 emails_1 {
@@ -294,14 +294,14 @@ emails_1 {
 	session := get_session(input.session.id)
 	user := get_user(session)
 	email := get_user_email(session, user)
-	email = rule_data
+	email == rule_data
 }
 
 users_2 {
 	rule_data := "user3"
 	session := get_session(input.session.id)
 	user := get_user(session)
-	user_id = rule_data
+	user.id == rule_data
 }
 
 emails_2 {
@@ -309,14 +309,14 @@ emails_2 {
 	session := get_session(input.session.id)
 	user := get_user(session)
 	email := get_user_email(session, user)
-	email = rule_data
+	email == rule_data
 }
 
 users_3 {
 	rule_data := "user4"
 	session := get_session(input.session.id)
 	user := get_user(session)
-	user_id = rule_data
+	user.id == rule_data
 }
 
 emails_3 {
@@ -324,14 +324,14 @@ emails_3 {
 	session := get_session(input.session.id)
 	user := get_user(session)
 	email := get_user_email(session, user)
-	email = rule_data
+	email == rule_data
 }
 
 users_4 {
 	rule_data := "user5"
 	session := get_session(input.session.id)
 	user := get_user(session)
-	user_id = rule_data
+	user.id == rule_data
 }
 
 emails_4 {
@@ -339,119 +339,147 @@ emails_4 {
 	session := get_session(input.session.id)
 	user := get_user(session)
 	email := get_user_email(session, user)
-	email = rule_data
+	email == rule_data
 }
 
-or_0 {
-	pomerium_routes_0
+or_0 = v1 {
+	v1 := pomerium_routes_0
+	v1
 }
 
-else {
-	accept_0
+else = v2 {
+	v2 := accept_0
+	v2
 }
 
-else {
-	cors_preflight_0
+else = v3 {
+	v3 := cors_preflight_0
+	v3
 }
 
-else {
-	authenticated_user_0
+else = v4 {
+	v4 := authenticated_user_0
+	v4
 }
 
-else {
-	domains_0
+else = v5 {
+	v5 := domains_0
+	v5
 }
 
-else {
-	domains_1
+else = v6 {
+	v6 := domains_1
+	v6
 }
 
-else {
-	domains_2
+else = v7 {
+	v7 := domains_2
+	v7
 }
 
-else {
-	domains_3
+else = v8 {
+	v8 := domains_3
+	v8
 }
 
-else {
-	domains_4
+else = v9 {
+	v9 := domains_4
+	v9
 }
 
-else {
-	groups_0
+else = v10 {
+	v10 := groups_0
+	v10
 }
 
-else {
-	groups_1
+else = v11 {
+	v11 := groups_1
+	v11
 }
 
-else {
-	groups_2
+else = v12 {
+	v12 := groups_2
+	v12
 }
 
-else {
-	groups_3
+else = v13 {
+	v13 := groups_3
+	v13
 }
 
-else {
-	groups_4
+else = v14 {
+	v14 := groups_4
+	v14
 }
 
-else {
-	claims_0
+else = v15 {
+	v15 := claims_0
+	v15
 }
 
-else {
-	claims_1
+else = v16 {
+	v16 := claims_1
+	v16
 }
 
-else {
-	claims_2
+else = v17 {
+	v17 := claims_2
+	v17
 }
 
-else {
-	users_0
+else = v18 {
+	v18 := users_0
+	v18
 }
 
-else {
-	emails_0
+else = v19 {
+	v19 := emails_0
+	v19
 }
 
-else {
-	users_1
+else = v20 {
+	v20 := users_1
+	v20
 }
 
-else {
-	emails_1
+else = v21 {
+	v21 := emails_1
+	v21
 }
 
-else {
-	users_2
+else = v22 {
+	v22 := users_2
+	v22
 }
 
-else {
-	emails_2
+else = v23 {
+	v23 := emails_2
+	v23
 }
 
-else {
-	users_3
+else = v24 {
+	v24 := users_3
+	v24
 }
 
-else {
-	emails_3
+else = v25 {
+	v25 := emails_3
+	v25
 }
 
-else {
-	users_4
+else = v26 {
+	v26 := users_4
+	v26
 }
 
-else {
-	emails_4
+else = v27 {
+	v27 := emails_4
+	v27
 }
 
-allow {
-	or_0
+allow = v1 {
+	v1 := or_0
+	v1
 }
 
 invalid_client_certificate_0 = reason {
@@ -460,80 +488,91 @@ invalid_client_certificate_0 = reason {
 	not input.is_valid_client_certificate
 }
 
-or_1 {
-	invalid_client_certificate_0
+or_1 = v1 {
+	v1 := invalid_client_certificate_0
+	v1
 }
 
-deny {
-	or_1
+deny = v1 {
+	v1 := or_1
+	v1
 }
 
 get_session(id) = v {
-	v := get_databroker_record("type.googleapis.com/user.ServiceAccount", id)
+	v = get_databroker_record("type.googleapis.com/user.ServiceAccount", id)
+	v != null
 }
 
 else = v {
-	v := get_databroker_record("type.googleapis.com/session.Session", id)
+	v = get_databroker_record("type.googleapis.com/session.Session", id)
+	v != null
 }
 
-else = v {
-	v := {}
+else = {} {
+	true
 }
 
 get_user(session) = v {
-	v := get_databroker_record("type.googleapis.com/user.User", session.impersonate_user_id)
+	v = get_databroker_record("type.googleapis.com/user.User", session.impersonate_user_id)
+	v != null
 }
 
 else = v {
-	v := get_databroker_record("type.googleapis.com/user.User", session.user_id)
+	v = get_databroker_record("type.googleapis.com/user.User", session.user_id)
+	v != null
 }
 
-else = v {
-	v := {}
+else = {} {
+	true
 }
 
 get_directory_user(session) = v {
-	v := get_databroker_record("type.googleapis.com/directory.User", session.impersonate_user_id)
+	v = get_databroker_record("type.googleapis.com/directory.User", session.impersonate_user_id)
+	v != null
 }
 
 else = v {
-	v := get_databroker_record("type.googleapis.com/directory.User", session.user_id)
+	v = get_databroker_record("type.googleapis.com/directory.User", session.user_id)
+	v != null
 }
 
-else = v {
-	v := {}
+else = "" {
+	true
 }
 
 get_directory_group(id) = v {
-	v := get_databroker_record("type.googleapis.com/directory.Group", id)
+	v = get_databroker_record("type.googleapis.com/directory.Group", id)
+	v != null
 }
 
-else = v {
-	v := {}
+else = {} {
+	true
 }
 
 get_user_email(session, user) = v {
-	v := session.impersonate_email
+	v = session.impersonate_email
 }
 
 else = v {
-	v := user.email
+	v = user.email
 }
 
-else = v {
-	v := ""
+else = "" {
+	true
 }
 
 get_group_ids(session, directory_user) = v {
-	v := session.impersonate_groups
+	v = session.impersonate_groups
+	v != null
 }
 
 else = v {
-	v := directory_user.group_ids
+	v = directory_user.group_ids
+	v != null
 }
 
-else = v {
-	v := []
+else = [] {
+	true
 }
 
 object_get(obj, key, def) = value {

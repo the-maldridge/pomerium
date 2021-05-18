@@ -8,8 +8,6 @@ import (
 	"github.com/pomerium/pomerium/pkg/policy/parser"
 )
 
-type conditionalGenerator func(dst *ast.RuleSet, policyCriteria []parser.Criterion) (*ast.Rule, error)
-
 func (g *Generator) generateAndRule(dst *ast.RuleSet, policyCriteria []parser.Criterion) (*ast.Rule, error) {
 	rule := g.NewRule("and")
 
@@ -106,33 +104,31 @@ func (g *Generator) generateCriterionRules(dst *ast.RuleSet, policyCriteria []pa
 }
 
 func (g *Generator) fillViaAnd(rule *ast.Rule, negated bool, terms []*ast.Term) {
+	currentRule := rule
+	currentRule.Head.Value = ast.VarTerm("v1")
 	for i, term := range terms {
-		if i == 0 {
-			rule.Body = append(rule.Body, ast.Assign.Expr(ast.VarTerm("v"), term))
-		}
-		expr := ast.NewExpr(term)
+		nm := fmt.Sprintf("v%d", i+1)
+		currentRule.Body = append(currentRule.Body, ast.Assign.Expr(ast.VarTerm(nm), term))
+		expr := ast.NewExpr(ast.VarTerm(nm))
 		if negated {
 			expr.Negated = true
 		}
-		rule.Body = append(rule.Body, expr)
+		currentRule.Body = append(currentRule.Body, expr)
 	}
 }
 
 func (g *Generator) fillViaOr(rule *ast.Rule, negated bool, terms []*ast.Term) {
 	currentRule := rule
-	currentRule.Head.Value = ast.VarTerm("v")
 	for i, term := range terms {
 		if i > 0 {
-			currentRule.Else = &ast.Rule{
-				Head: &ast.Head{
-					Value: ast.VarTerm("v"),
-				},
-			}
+			currentRule.Else = &ast.Rule{Head: &ast.Head{}}
 			currentRule = currentRule.Else
 		}
+		nm := fmt.Sprintf("v%d", i+1)
+		currentRule.Head.Value = ast.VarTerm(nm)
 
-		currentRule.Body = append(currentRule.Body, ast.Assign.Expr(ast.VarTerm("v"), term))
-		expr := ast.NewExpr(ast.VarTerm("v"))
+		currentRule.Body = append(currentRule.Body, ast.Assign.Expr(ast.VarTerm(nm), term))
+		expr := ast.NewExpr(ast.VarTerm(nm))
 		if negated {
 			expr.Negated = true
 		}
