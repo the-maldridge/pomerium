@@ -72,7 +72,7 @@ func NewOriginalEvaluator(options *config.Options, store *Store) (*OriginalEvalu
 }
 
 // Evaluate evaluates the policy against the request.
-func (e *OriginalEvaluator) Evaluate(ctx context.Context, req *Request) (*Result, error) {
+func (e *OriginalEvaluator) Evaluate(ctx context.Context, req *OriginalRequest) (*Result, error) {
 	isValid, err := isValidClientCertificate(req.ClientCA, req.HTTP.ClientCertificate)
 	if err != nil {
 		return nil, fmt.Errorf("error validating client certificate: %w", err)
@@ -178,7 +178,7 @@ type input struct {
 	IsValidClientCertificate bool           `json:"is_valid_client_certificate"`
 }
 
-func (e *OriginalEvaluator) newInput(req *Request, isValidClientCertificate bool) *input {
+func (e *OriginalEvaluator) newInput(req *OriginalRequest, isValidClientCertificate bool) *input {
 	i := new(input)
 	i.HTTP = req.HTTP
 	i.Session = req.Session

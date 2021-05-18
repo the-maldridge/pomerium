@@ -1,8 +1,8 @@
 package evaluator
 
 type (
-	// Request is the request data used for the evaluator.
-	Request struct {
+	// OriginalRequest is the request data used for the evaluator.
+	OriginalRequest struct {
 		HTTP           RequestHTTP    `json:"http"`
 		Session        RequestSession `json:"session"`
 		CustomPolicies []string

@@ -37,7 +37,7 @@ func TestOPA(t *testing.T) {
 	publicJWK, err := cryptutil.PublicJWKFromBytes(encodedSigningKey, jose.ES256)
 	require.NoError(t, err)
 
-	eval := func(t *testing.T, policies []config.Policy, data []proto.Message, req *Request, isValidClientCertificate bool) rego.Result {
+	eval := func(t *testing.T, policies []config.Policy, data []proto.Message, req *OriginalRequest, isValidClientCertificate bool) rego.Result {
 		authzPolicy, err := readPolicy()
 		require.NoError(t, err)
 		store := NewStoreFromProtos(math.MaxUint64, data...)
@@ -63,7 +63,7 @@ func TestOPA(t *testing.T) {
 	}
 
 	t.Run("client certificate", func(t *testing.T) {
-		res := eval(t, nil, nil, &Request{}, false)
+		res := eval(t, nil, nil, &OriginalRequest{}, false)
 		assert.Equal(t,
 			A{A{json.Number("495"), "invalid client certificate"}},
 			res.Bindings["result"].(M)["deny"])
@@ -86,7 +86,7 @@ func TestOPA(t *testing.T) {
 					Id:    "user1",
 					Email: "a@example.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -118,7 +118,7 @@ func TestOPA(t *testing.T) {
 						Id:    "user1",
 						Email: "a@example.com",
 					},
-				}, &Request{
+				}, &OriginalRequest{
 					Session: RequestSession{
 						ID: "session1",
 					},
@@ -139,7 +139,7 @@ func TestOPA(t *testing.T) {
 				To: config.WeightedURLs{
 					{URL: *mustParseURL("https://to.example.com")},
 				},
-			}}, msgs, &Request{
+			}}, msgs, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -267,7 +267,7 @@ func TestOPA(t *testing.T) {
 					Id:    "user1",
 					Email: "a@example.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -300,7 +300,7 @@ func TestOPA(t *testing.T) {
 					Id:    "user1",
 					Email: "a@example.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -329,7 +329,7 @@ func TestOPA(t *testing.T) {
 					Id:    "user1",
 					Email: "b@example.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -361,7 +361,7 @@ func TestOPA(t *testing.T) {
 					Id:    "user1",
 					Email: "a@example.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -391,7 +391,7 @@ func TestOPA(t *testing.T) {
 					Id:    "user1",
 					Email: "a@example.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -421,7 +421,7 @@ func TestOPA(t *testing.T) {
 				Id:    "example/1234",
 				Email: "a@example.com",
 			},
-		}, &Request{
+		}, &OriginalRequest{
 			Session: RequestSession{
 				ID: "session1",
 			},
@@ -452,7 +452,7 @@ func TestOPA(t *testing.T) {
 					Id:    "example/user1",
 					Email: "a@example.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -486,7 +486,7 @@ func TestOPA(t *testing.T) {
 					Id:    "example/user1",
 					Email: "a@example.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -515,7 +515,7 @@ func TestOPA(t *testing.T) {
 					Id:    "user1",
 					Email: "a@example.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -547,7 +547,7 @@ func TestOPA(t *testing.T) {
 					Id:    "user1",
 					Email: "a@notexample.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -577,7 +577,7 @@ func TestOPA(t *testing.T) {
 					Id:    "user1",
 					Email: "a@example.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -619,7 +619,7 @@ func TestOPA(t *testing.T) {
 							Name:  "group1name",
 							Email: "group1@example.com",
 						},
-					}, &Request{
+					}, &OriginalRequest{
 						Session: RequestSession{
 							ID: "session1",
 						},
@@ -659,7 +659,7 @@ func TestOPA(t *testing.T) {
 					Name:  "group-1",
 					Email: "group1@example.com",
 				},
-			}, &Request{
+			}, &OriginalRequest{
 				Session: RequestSession{
 					ID: "session1",
 				},
@@ -696,7 +696,7 @@ func TestOPA(t *testing.T) {
 				Name:  "group-1",
 				Email: "group1@example.com",
 			},
-		}, &Request{
+		}, &OriginalRequest{
 			Session: RequestSession{
 				ID: "session1",
 			},
@@ -725,7 +725,7 @@ func TestOPA(t *testing.T) {
 				Id:    "user1",
 				Email: "a@example.com",
 			},
-		}, &Request{
+		}, &OriginalRequest{
 			Session: RequestSession{
 				ID: "session1",
 			},
@@ -739,7 +739,7 @@ func TestOPA(t *testing.T) {
 	t.Run("databroker versions", func(t *testing.T) {
 		res := eval(t, nil, []proto.Message{
 			wrapperspb.String("test"),
-		}, &Request{}, false)
+		}, &OriginalRequest{}, false)
 		serverVersion, recordVersion := getDataBrokerVersions(res.Bindings)
 		assert.Equal(t, uint64(math.MaxUint64), serverVersion)
 		assert.NotEqual(t, uint64(0), recordVersion) // random

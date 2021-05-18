@@ -117,9 +117,9 @@ func (a *Authorize) isForwardAuth(req *envoy_service_auth_v3.CheckRequest) bool 
 func (a *Authorize) getEvaluatorRequestFromCheckRequest(
 	in *envoy_service_auth_v3.CheckRequest,
 	sessionState *sessions.State,
-) (*evaluator.Request, error) {
+) (*evaluator.OriginalRequest, error) {
 	requestURL := getCheckRequestURL(in)
-	req := &evaluator.Request{
+	req := &evaluator.OriginalRequest{
 		HTTP: evaluator.RequestHTTP{
 			Method:            in.GetAttributes().GetRequest().GetHttp().GetMethod(),
 			URL:               requestURL.String(),

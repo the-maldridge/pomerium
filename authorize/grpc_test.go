@@ -85,7 +85,7 @@ func Test_getEvaluatorRequest(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	expect := &evaluator.Request{
+	expect := &evaluator.OriginalRequest{
 		Session: evaluator.RequestSession{
 			ID: "SESSION_ID",
 		},
@@ -293,7 +293,7 @@ func Test_getEvaluatorRequestWithPortInHostHeader(t *testing.T) {
 		},
 	}, nil)
 	require.NoError(t, err)
-	expect := &evaluator.Request{
+	expect := &evaluator.OriginalRequest{
 		Session: evaluator.RequestSession{},
 		HTTP: evaluator.RequestHTTP{
 			Method: "GET",

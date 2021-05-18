@@ -12,25 +12,25 @@ import (
 	"github.com/pomerium/pomerium/pkg/policy"
 )
 
-// PolicyInput is the input to policy evaluation.
-type PolicyInput struct {
+// PolicyRequest is the input to policy evaluation.
+type PolicyRequest struct {
 	HTTP                     RequestHTTP    `json:"http"`
 	Session                  RequestSession `json:"session"`
 	IsValidClientCertificate bool           `json:"is_valid_client_certificate"`
 }
 
-// PolicyOutput is the result of evaluating a policy.
-type PolicyOutput struct {
+// PolicyResponse is the result of evaluating a policy.
+type PolicyResponse struct {
 	Allow bool
 	Deny  *Denial
 }
 
-// Merge merges another PolicyOutput into this Output. Access is allowed if either is allowed. Access is denied if
+// Merge merges another PolicyResponse into this PolicyResponse. Access is allowed if either is allowed. Access is denied if
 // either is denied. (and denials take precedence)
-func (output *PolicyOutput) Merge(other *PolicyOutput) *PolicyOutput {
-	merged := &PolicyOutput{
-		Allow: output.Allow || other.Allow,
-		Deny:  output.Deny,
+func (res *PolicyResponse) Merge(other *PolicyResponse) *PolicyResponse {
+	merged := &PolicyResponse{
+		Allow: res.Allow || other.Allow,
+		Deny:  res.Deny,
 	}
 	if other.Deny != nil {
 		merged.Deny = other.Deny
@@ -92,21 +92,21 @@ func NewPolicyEvaluator(ctx context.Context, store *Store, configPolicy *config.
 }
 
 // Evaluate evaluates the policy rego scripts.
-func (e *PolicyEvaluator) Evaluate(ctx context.Context, input *PolicyInput) (*PolicyOutput, error) {
-	output := new(PolicyOutput)
+func (e *PolicyEvaluator) Evaluate(ctx context.Context, req *PolicyRequest) (*PolicyResponse, error) {
+	res := new(PolicyResponse)
 	// run each query and merge the results
 	for _, query := range e.queries {
-		o, err := e.evaluateQuery(ctx, input, query)
+		o, err := e.evaluateQuery(ctx, req, query)
 		if err != nil {
 			return nil, err
 		}
-		output = output.Merge(o)
+		res = res.Merge(o)
 	}
-	return output, nil
+	return res, nil
 }
 
-func (e *PolicyEvaluator) evaluateQuery(ctx context.Context, input *PolicyInput, query rego.PreparedEvalQuery) (*PolicyOutput, error) {
-	rs, err := query.Eval(ctx, rego.EvalInput(input))
+func (e *PolicyEvaluator) evaluateQuery(ctx context.Context, req *PolicyRequest, query rego.PreparedEvalQuery) (*PolicyResponse, error) {
+	rs, err := query.Eval(ctx, rego.EvalInput(req))
 	if err != nil {
 		return nil, fmt.Errorf("authorize: error evaluating policy.rego: %w", err)
 	}
@@ -115,7 +115,7 @@ func (e *PolicyEvaluator) evaluateQuery(ctx context.Context, input *PolicyInput,
 		return nil, fmt.Errorf("authorize: unexpected empty result from evaluating policy.rego")
 	}
 
-	return &PolicyOutput{
+	return &PolicyResponse{
 		Allow: e.getAllow(rs[0].Bindings),
 		Deny:  e.getDeny(ctx, rs[0].Bindings),
 	}, nil

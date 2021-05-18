@@ -30,7 +30,7 @@ func TestHeadersEvaluator(t *testing.T) {
 	publicJWK, err := cryptutil.PublicJWKFromBytes(encodedSigningKey, jose.ES256)
 	require.NoError(t, err)
 
-	eval := func(t *testing.T, data []proto.Message, input *HeadersInput) (*HeadersOutput, error) {
+	eval := func(t *testing.T, data []proto.Message, input *HeadersRequest) (*HeadersResponse, error) {
 		store := NewStoreFromProtos(math.MaxUint64, data...)
 		store.UpdateIssuer("authenticate.example.com")
 		store.UpdateJWTClaimHeaders(config.NewJWTClaimHeaders("email", "groups", "user", "CUSTOM_KEY"))
@@ -43,13 +43,13 @@ func TestHeadersEvaluator(t *testing.T) {
 	t.Run("jwt", func(t *testing.T) {
 		output, err := eval(t,
 			[]proto.Message{},
-			&HeadersInput{
+			&HeadersRequest{
 				FromAudience: "from.example.com",
 				ToAudience:   "to.example.com",
 			})
 		require.NoError(t, err)
 
-		rawJWT, err := jwt.ParseSigned(output.IdentityHeaders.Get("X-Pomerium-Jwt-Assertion"))
+		rawJWT, err := jwt.ParseSigned(output.Headers.Get("X-Pomerium-Jwt-Assertion"))
 		require.NoError(t, err)
 
 		var claims M

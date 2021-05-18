@@ -28,7 +28,7 @@ func TestPolicyEvaluator(t *testing.T) {
 	privateJWK, err := cryptutil.PrivateJWKFromBytes(encodedSigningKey, jose.ES256)
 	require.NoError(t, err)
 
-	eval := func(t *testing.T, policy *config.Policy, data []proto.Message, input *PolicyInput) (*PolicyOutput, error) {
+	eval := func(t *testing.T, policy *config.Policy, data []proto.Message, input *PolicyRequest) (*PolicyResponse, error) {
 		store := NewStoreFromProtos(math.MaxUint64, data...)
 		store.UpdateIssuer("authenticate.example.com")
 		store.UpdateJWTClaimHeaders(config.NewJWTClaimHeaders("email", "groups", "user", "CUSTOM_KEY"))
@@ -64,14 +64,14 @@ func TestPolicyEvaluator(t *testing.T) {
 		output, err := eval(t,
 			p1,
 			[]proto.Message{s1, u1, s2, u2},
-			&PolicyInput{
+			&PolicyRequest{
 				HTTP:    RequestHTTP{Method: "GET", URL: "https://from.example.com/path"},
 				Session: RequestSession{ID: "s1"},
 
 				IsValidClientCertificate: true,
 			})
 		require.NoError(t, err)
-		assert.Equal(t, &PolicyOutput{
+		assert.Equal(t, &PolicyResponse{
 			Allow: true,
 		}, output)
 	})
@@ -79,14 +79,14 @@ func TestPolicyEvaluator(t *testing.T) {
 		output, err := eval(t,
 			p1,
 			[]proto.Message{s1, u1, s2, u2},
-			&PolicyInput{
+			&PolicyRequest{
 				HTTP:    RequestHTTP{Method: "GET", URL: "https://from.example.com/path"},
 				Session: RequestSession{ID: "s1"},
 
 				IsValidClientCertificate: false,
 			})
 		require.NoError(t, err)
-		assert.Equal(t, &PolicyOutput{
+		assert.Equal(t, &PolicyResponse{
 			Allow: true,
 			Deny: &Denial{
 				Status:  495,
@@ -98,14 +98,14 @@ func TestPolicyEvaluator(t *testing.T) {
 		output, err := eval(t,
 			p1,
 			[]proto.Message{s1, u1, s2, u2},
-			&PolicyInput{
+			&PolicyRequest{
 				HTTP:    RequestHTTP{Method: "GET", URL: "https://from.example.com/path"},
 				Session: RequestSession{ID: "s2"},
 
 				IsValidClientCertificate: true,
 			})
 		require.NoError(t, err)
-		assert.Equal(t, &PolicyOutput{
+		assert.Equal(t, &PolicyResponse{
 			Allow: false,
 		}, output)
 	})

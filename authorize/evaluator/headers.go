@@ -12,17 +12,18 @@ import (
 	"github.com/pomerium/pomerium/internal/urlutil"
 )
 
-// HeadersInput is the input to the headers.rego script.
-type HeadersInput struct {
-	EnableGoogleCloudServerlessAuthentication bool   `json:"enable_google_cloud_serverless_authentication"`
-	FromAudience                              string `json:"from_audience"`
-	KubernetesServiceAccountToken             string `json:"kubernetes_service_account_token"`
-	ToAudience                                string `json:"to_audience"`
+// HeadersRequest is the input to the headers.rego script.
+type HeadersRequest struct {
+	EnableGoogleCloudServerlessAuthentication bool           `json:"enable_google_cloud_serverless_authentication"`
+	FromAudience                              string         `json:"from_audience"`
+	KubernetesServiceAccountToken             string         `json:"kubernetes_service_account_token"`
+	ToAudience                                string         `json:"to_audience"`
+	Session                                   RequestSession `json:"session"`
 }
 
-// NewHeadersInputFromPolicy creates a new HeadersInput from a policy.
-func NewHeadersInputFromPolicy(policy *config.Policy) *HeadersInput {
-	input := new(HeadersInput)
+// NewHeadersRequestFromPolicy creates a new HeadersRequest from a policy.
+func NewHeadersRequestFromPolicy(policy *config.Policy) *HeadersRequest {
+	input := new(HeadersRequest)
 	input.EnableGoogleCloudServerlessAuthentication = policy.EnableGoogleCloudServerlessAuthentication
 	if u, err := urlutil.ParseAndValidateURL(policy.From); err == nil {
 		input.FromAudience = u.Hostname()
@@ -34,9 +35,9 @@ func NewHeadersInputFromPolicy(policy *config.Policy) *HeadersInput {
 	return input
 }
 
-// HeadersOutput is the output from the headers.rego script.
-type HeadersOutput struct {
-	IdentityHeaders http.Header `json:"identity_headers"`
+// HeadersResponse is the output from the headers.rego script.
+type HeadersResponse struct {
+	Headers http.Header
 }
 
 // A HeadersEvaluator evaluates the headers.rego script.
@@ -70,8 +71,8 @@ func NewHeadersEvaluator(ctx context.Context, store *Store) (*HeadersEvaluator, 
 }
 
 // Evaluate evaluates the headers.rego script.
-func (e *HeadersEvaluator) Evaluate(ctx context.Context, input *HeadersInput) (*HeadersOutput, error) {
-	rs, err := e.q.Eval(ctx, rego.EvalInput(input))
+func (e *HeadersEvaluator) Evaluate(ctx context.Context, req *HeadersRequest) (*HeadersResponse, error) {
+	rs, err := e.q.Eval(ctx, rego.EvalInput(req))
 	if err != nil {
 		return nil, fmt.Errorf("authorize: error evaluating headers.rego: %w", err)
 	}
@@ -80,8 +81,8 @@ func (e *HeadersEvaluator) Evaluate(ctx context.Context, input *HeadersInput) (*
 		return nil, fmt.Errorf("authorize: unexpected empty result from evaluating headers.rego")
 	}
 
-	return &HeadersOutput{
-		IdentityHeaders: e.getHeader(rs[0].Bindings),
+	return &HeadersResponse{
+		Headers: e.getHeader(rs[0].Bindings),
 	}, nil
 }
 

@@ -4,6 +4,8 @@ package pomerium.headers
 #   enable_google_cloud_serverless_authentication: boolean
 #   from_audience: string
 #   kubernetes_service_account_token: string
+#   session:
+#     id: string
 #   to_audience: string
 #
 # data:
